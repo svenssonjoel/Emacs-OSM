@@ -1,2 +1,3 @@
 # Emacs-OSM
-Emacs OpenStreetMap viewing
+Emacs OpenStreetMap viewing (Work in progress)
+
