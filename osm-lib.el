@@ -90,8 +90,6 @@
 (defmacro osm-lib-get-zoom (xyzoom)
   `(cdr ,xyzoom))
 
-
-
 (defun osm-lib-gen-tile-url (xyzoom)
   "Returns string representing download address for tile"
   (let ((tile-z-x-y (format "%d/%d/%d.png"
@@ -100,6 +98,13 @@
 			    (osm-lib-get-y xyzoom))))
     (concat osm-lib-map-tiles-url tile-z-x-y)))
 
+(defun osm-lib-gen-tile-cache-filepath (xyzoom)
+  (format "%s%s%d/tile%d_%d.png"
+	  (expand-file-name osm-lib-root-dir)
+	  osm-lib-tiles-cache-dir
+	  (osm-lib-get-zoom xyzoom)
+	  (osm-lib-get-x xyzoom)
+	  (osm-lib-get-y xyzoom)))
 
 (defun osm-lib-tile-grid-coords (m n xyzoom)
   "Returns list of coordinates for a grid of tiles centered on x,y at given zoom level"
@@ -130,19 +135,21 @@
 
 (defun osm-lib-load-tile (xyzoom)
   "Load a tile from web if not present in cache. If tile is not in cache, add it"
-  (let* ((cache-path (concat (expand-file-name osm-lib-root-dir) osm-lib-tiles-cache-dir))
+  (let* (
+	 (cache-path (concat (expand-file-name osm-lib-root-dir) osm-lib-tiles-cache-dir))
 	 (cache-level-path (concat cache-path (format "%s/"
-						      (osm-lib-get-zoom xyzoom))))
+	 					      (osm-lib-get-zoom xyzoom))))
 	 (tile-url (osm-lib-gen-tile-url xyzoom))
-	 (ofile (format "tile%d_%d.png"
-			(osm-lib-get-x xyzoom)
-			(osm-lib-get-y xyzoom)))
-	 (ofile-path (concat cache-level-path ofile)))
+	 ;;(ofile (format "tile%d_%d.png"
+	 ;;		(osm-lib-get-x xyzoom)
+	 ;;		(osm-lib-get-y xyzoom)))
+	 ;;(ofile-path (concat cache-level-path ofile))
+	 (ofile-path (osm-lib-gen-tile-cache-filepath xyzoom)))
     (progn (when (not (file-directory-p cache-level-path))
 	     (make-directory cache-level-path))
 	   (if (file-exists-p ofile-path)
 	       (progn
-		 (message (format "OSM: %s exists in cache" ofile))
+		 (message (format "OSM: %s exists in cache" ofile-path))
 		 't)
 	     (make-process :name "wget-tile"
 			   :command (list "wget" tile-url "-O" ofile-path))))))
@@ -153,14 +160,23 @@
     (osm-lib-load-tile elt)))
 
 
+(defun osm-lib-gen-tile-montage (m n tiles)
+  "Compose tiles into a larger map"
+  (let ((width (* m 256))
+	(height (* n 256)))
+    
+    ()))
+
+
 
 ;; (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8)
 
 ;; (osm-lib-gen-tile-url (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8))
-
+     
 ;; (osm-lib-load-tile (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8))
 
 ;; (osm-lib-load-tiles (osm-lib-tile-grid-coords 5 5 (cons (cons 137 77) 8)))
 
 ;; (expand-file-name osm-lib-root-dir)
 
+;; (osm-lib-gen-tile-cache-filepath (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8))
