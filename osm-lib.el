@@ -162,10 +162,19 @@
 
 (defun osm-lib-gen-tile-montage (m n tiles)
   "Compose tiles into a larger map"
-  (let ((width (* m 256))
-	(height (* n 256)))
-    
-    ()))
+  (let* ((width (* m 256))
+	 (height (* n 256))
+	 (scratch-path (concat (expand-file-name osm-lib-root-dir) osm-lib-scratch-work-area))
+	 (ofile (format "m%s.png" (sxhash tiles)))
+	 (ofile-path (concat scratch-path ofile)))
+    (let ((files-acc '()))
+      (progn (osm-lib-load-tiles tiles) ;; Load all tiles (if not in cache) 
+	     (dolist (elt (reverse tiles) '())
+	       (setq files-acc (cons (format "%s" (osm-lib-gen-tile-cache-filepath elt)) files-acc)))
+	     (make-process :name "montage-proc"
+			   :command (append (list "montage") files-acc  (list "-tile" (format "%sx%s" m n) "-geometry" "+0+0" ofile-path))
+			   :buffer "montage-buffer")
+	     ofile-path))))
 
 
 
@@ -176,6 +185,8 @@
 ;; (osm-lib-load-tile (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8))
 
 ;; (osm-lib-load-tiles (osm-lib-tile-grid-coords 5 5 (cons (cons 137 77) 8)))
+
+;; (osm-lib-gen-tile-montage 5 5 (osm-lib-tile-grid-coords 5 5 (cons (cons 137 77) 8)))
 
 ;; (expand-file-name osm-lib-root-dir)
 
