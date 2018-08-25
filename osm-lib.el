@@ -176,7 +176,9 @@
 			   :buffer "montage-buffer")
 	     ofile-path))))
 
+(provide 'osm-lib)
 
+;; (osm-lib-create-directories)
 
 ;; (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8)
 
