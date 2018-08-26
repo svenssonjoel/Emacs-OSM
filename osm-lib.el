@@ -29,7 +29,7 @@
 
 (defconst osm-lib-center-of-the-universe (cons 57.72101 12.9401))
 
-(defvar osm-lib-map-tiles-url "https://maps.wikimedia.org/osm-intl/")
+(defvar osm-lib-map-tiles-url "https://tile.openstreetmap.org/")
 
 (defvar osm-lib-cache-tiles 't
   "Flag indicating whether OSM tiles should be cached or not.")
@@ -153,6 +153,7 @@
 		 't)
 	     (make-process :name "wget-tile"
 			   :command (list "wget" tile-url "-O" ofile-path))))))
+;; TODO: Check for success or failure of trying to load these
 	   
 (defun osm-lib-load-tiles (tiles)
   "Load many tiles based on a list of xyzooms"
