@@ -22,23 +22,26 @@
 (require 'image-mode)
 
 ;; ------------------------------------------------------------
-;; Vars
-(defvar osm-image-scale 1.0) 
-(defvar osm-image-scale-delta 0.1)
-
-(defvar osm-zoom-level 8)
+;; Constants
 (defconst osm-zoom-level-max 19)
 (defconst osm-zoom-level-min 0)
 
+;; ------------------------------------------------------------
+;; Buffer local Vars (or will be made buffer local upon change) 
+(defvar osm-image-scale 1.0)
+(make-variable-buffer-local 'osm-image-scale)
+
+(defvar osm-image-scale-delta 0.1)
+(make-variable-buffer-local 'osm-image-scale-delta)
+
+(defvar osm-zoom-level 8)
+(make-variable-buffer-local 'osm-zoom-level)
+
 (defvar osm-view-lat-long osm-lib-center-of-the-universe)
-
-;; These should be somehow set as local variables per buffer...
-;; TODO: Learn about buffer-local variables.
-
+(make-variable-buffer-local 'osm-view-lat-long)
 
 ;; ------------------------------------------------------------
 ;; CODE
-
 (defun osm-start ()
   "Start OpenStreetMap viewing. Creates a new buffer and sets image-mode and osm-mode"
   (interactive)
