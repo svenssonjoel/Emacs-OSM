@@ -115,7 +115,8 @@
       (lambda (y)
 	(mapcar
 	 (lambda (x) (cons (cons (+ (osm-lib-get-x xyzoom) x)
-				 (+ (osm-lib-get-y xyzoom) y)) (osm-lib-get-zoom xyzoom)))
+				 (+ (osm-lib-get-y xyzoom) y))
+			   (osm-lib-get-zoom xyzoom)))
 	 (number-sequence (- 0 mhalf) mhalf)))
       (number-sequence (- 0 nhalf) nhalf)))))
   
