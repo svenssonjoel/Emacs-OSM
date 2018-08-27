@@ -18,6 +18,14 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with Emacs-OSM.  If not, see <https://www.gnu.org/licenses/>.
 
+;; TODOs
+;; - Get window size of window displaying map and use that to decide with and height in number of tiles for display.
+;;    - get-buffer-window, window-pixel-height and window-pixel-width
+;; - See if it is possible to track resizing of the window
+
+
+;; ------------------------------------------------------------
+;; Requirements 
 (require 'osm-lib)
 (require 'image-mode)
 
