@@ -34,6 +34,13 @@
 (defconst osm-zoom-level-max 19)
 (defconst osm-zoom-level-min 0)
 
+
+;; ------------------------------------------------------------
+;; Global Variables
+
+(defvar osm-window-size-changed 'nil)
+
+
 ;; ------------------------------------------------------------
 ;; Buffer local Vars (or will be made buffer local upon change) 
 (defvar osm-image-scale 1.0)
@@ -66,7 +73,13 @@
 	  (insert-file-contents montage-file)
 	  (image-mode)
 	  (osm-mode))
-	(switch-to-buffer buffer)))))
+	(switch-to-buffer buffer)
+	(add-hook 'window-size-change-functions 'osm-window-size-change-func)))))
+
+(defun osm-window-size-change-func (frame)
+  (message "window size change registered")
+  (setq osm-window-size-changed 't)
+  (message (format "osm-window-size-changed=%s" osm-window-size-changed)))
     
 (defun osm-image-scale-incr ()
   (interactive)
