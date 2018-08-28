@@ -28,6 +28,7 @@
 ;; Requirements 
 (require 'osm-lib)
 (require 'image-mode)
+(require 'cl)
 
 ;; ------------------------------------------------------------
 ;; Constants
@@ -61,21 +62,28 @@
   "Start OpenStreetMap viewing. Creates a new buffer and sets image-mode and osm-mode"
   (interactive)
   (let* ((tile-index (osm-lib-x-y-tile-index osm-view-lat-long osm-zoom-level))
-	 (tiles (osm-lib-tile-grid-coords 5 5 tile-index))
+	 (tiles (osm-lib-tile-grid-coords 5 5 tile-index)))
 	 ;; (osm-lib-load-tiles tiles) ;; loads automatically at gen-tile-montage
-	 (montage-file
-	  (osm-lib-gen-tile-montage 5 5
-				    (osm-lib-tile-grid-coords 5 5 tile-index))))
-    (let ((buffer (generate-new-buffer "osm")))
-      (progn 
-	(with-current-buffer buffer
-	  (setq major-mode 'image-mode)
-	  (insert-file-contents montage-file)
-	  (image-mode)
-	  (osm-mode))
+	 ;;(montage-file
+    (lexical-let ((buffer (generate-new-buffer "osm")))
+      (let ((success-fun
+	     (lambda (filename)
+	       (set-buffer buffer)
+	       (setq major-mode 'image-mode)
+	       (insert-file-contents filename)
+	       (image-mode)
+	       (osm-mode))))
+	(osm-lib-gen-tile-montage (osm-lib-tile-grid-coords 5 5 tile-index) success-fun)
 	(switch-to-buffer buffer)
 	(add-hook 'window-size-change-functions 'osm-window-size-change-func)))))
 
+      ;; (progn 
+      ;; 	(with-current-buffer buffer
+      ;; 	  (setq major-mode 'image-mode)
+      ;; 	  (insert-file-contents "/home/joels/emacs_osm/scratch/m11619852694514.png" )
+      ;; 	  (image-mode)
+      ;; 	  (osm-mode))
+	
 (defun osm-window-size-change-func (frame)
   (message "window size change registered")
   (setq osm-window-size-changed 't)
@@ -84,25 +92,43 @@
 (defun osm-image-scale-incr ()
   (interactive)
   (setq osm-image-scale (+ osm-image-scale osm-image-scale-delta))
+  (when (>= osm-image-scale 2.0)
+    (progn
+      (osm-zoom-level-incr)
+      (setq osm-image-scale 1.0)))
   (image-transform-set-scale osm-image-scale))
 
 (defun osm-image-scale-decr ()
   (interactive)
   (setq osm-image-scale (- osm-image-scale osm-image-scale-delta))
+  (when (<= osm-image-scale 0.5)
+      (progn
+	(osm-zoom-level-decr)
+	(setq osm-image-scale 1.0)))
   (image-transform-set-scale osm-image-scale))
 
 (defun osm-redraw-map ()
   (let* ((tile-index (osm-lib-x-y-tile-index osm-view-lat-long osm-zoom-level))
-	 (tiles (osm-lib-tile-grid-coords 5 5 tile-index))
-	 (montage-file
-	  (osm-lib-gen-tile-montage 5 5
-				    (osm-lib-tile-grid-coords 5 5 tile-index))))
-    (image-transform-set-scale osm-image-scale)
-    (image-toggle-display-text)
-    (setf (buffer-string) "")
-    (insert-file-contents montage-file)
-    (image-toggle-display-image)))
+	 (tiles (osm-lib-tile-grid-coords 5 5 tile-index)))
 
+
+    ;; TODO: Messy here.
+    (lexical-let ((buff (current-buffer)))
+      (let ((success-fun
+	     (lambda (filename)
+	       (progn 
+		 (set-buffer buff)
+		 (message (format "Buffer Name: %s" (buffer-name (current-buffer))))
+		 (image-transform-set-scale osm-image-scale)
+		 (image-toggle-display-text)
+		 (setf (buffer-string) "")
+		 (insert-file-contents filename)
+		 (image-toggle-display-image)))))
+    (osm-lib-gen-tile-montage
+     (osm-lib-tile-grid-coords 5 5 tile-index)
+     success-fun)))))
+    
+    
 (defun osm-zoom-level-incr ()
   (interactive)
   (when ( < osm-zoom-level osm-zoom-level-max)
@@ -111,7 +137,6 @@
       (setq osm-zoom-level (+ osm-zoom-level 1))
       (setq osm-image-scale 1.0)
       (osm-redraw-map)))) ;; Reset image scaling
-;; TODO: create a new montage for the new zoom level and redisplay
 
 (defun osm-zoom-level-decr ()
   (interactive)
@@ -121,7 +146,6 @@
       (setq osm-zoom-level (- osm-zoom-level 1))
       (setq osm-image-scale 1.0)
       (osm-redraw-map)))) ;; reset image scaling 
-;; TODO: Create a new montage for the new zoom level and redisplay 
 
 
 (defun osm-gen-keymap ()

@@ -27,6 +27,8 @@
 ;; Example of url for accessing a map tile from the web 
 ;; https://maps.wikimedia.org/osm-intl/8/137/77.png
 
+(require 'cl)
+
 (defconst osm-lib-center-of-the-universe (cons 57.72101 12.9401))
 
 (defvar osm-lib-map-tiles-url "https://tile.openstreetmap.org/")
@@ -108,18 +110,36 @@
 
 (defun osm-lib-tile-grid-coords (m n xyzoom)
   "Returns list of coordinates for a grid of tiles centered on x,y at given zoom level"
-  (let ((mhalf (/ m 2))
-	(nhalf (/ n 2)))
-    (apply #'append 
-     (mapcar
-      (lambda (y)
-	(mapcar
-	 (lambda (x) (cons (cons (+ (osm-lib-get-x xyzoom) x)
-				 (+ (osm-lib-get-y xyzoom) y))
-			   (osm-lib-get-zoom xyzoom)))
-	 (number-sequence (- 0 mhalf) mhalf)))
-      (number-sequence (- 0 nhalf) nhalf)))))
-  
+  (let ((x_tile (osm-lib-get-x xyzoom))
+	(y_tile (osm-lib-get-y xyzoom))
+	(tile_max_x (- (osm-lib-num-tiles (osm-lib-get-zoom xyzoom)) 1))
+	(tile_max_y (- (osm-lib-num-tiles (osm-lib-get-zoom xyzoom)) 1)))
+    (let* ((mhalf (/ m 2))
+	   (nhalf (/ n 2))
+	   (mrest (- (- m mhalf) 1))
+	   (nrest (- (- n nhalf) 1))
+	   (r_x1 (if (<= (- x_tile mhalf) 0)
+		     0 (- x_tile mhalf)))
+	   (r_x2 (if (>= (+ x_tile mrest) tile_max_x)
+		     tile_max_x (+ x_tile mrest)))
+	   (r_y1 (if (<= (- y_tile nhalf) 0)
+		     0 (- y_tile nhalf)))
+	   (r_y2 (if (>= (+ y_tile nrest) tile_max_y)
+		     tile_max_y (+ y_tile nrest)))
+	   (xs (number-sequence r_x1 r_x2))
+	   (ys (number-sequence r_y1 r_y2))
+	   (m_new (length xs))
+	   (n_new (length ys)))
+      (cons (cons m_new n_new)
+	    (apply #'append 
+		   (mapcar
+		    (lambda (y)
+		      (mapcar
+		       (lambda (x) (cons (cons x y) 
+					 (osm-lib-get-zoom xyzoom)))
+		       (number-sequence r_x1 r_x2)))
+		    (number-sequence r_y1 r_y2)))))))
+
 (defun osm-lib-create-directories ()
   "Create directories for the tiles cache and scratch work area if not already there" 
   (let* ((root-path (expand-file-name osm-lib-root-dir))
@@ -162,9 +182,13 @@
     (osm-lib-load-tile elt)))
 
 
-(defun osm-lib-gen-tile-montage (m n tiles)
+(defun osm-lib-gen-tile-montage (mntiles &optional do-on-success)
   "Compose tiles into a larger map"
-  (let* ((width (* m 256))
+  (let* ((mn (car mntiles))
+	 (tiles (cdr mntiles))
+	 (m (car mn))
+	 (n (cdr mn))
+	 (width (* m 256))
 	 (height (* n 256))
 	 (scratch-path (concat (expand-file-name osm-lib-root-dir) osm-lib-scratch-work-area))
 	 (ofile (format "m%s.png" (sxhash tiles)))
@@ -173,10 +197,19 @@
       (progn (osm-lib-load-tiles tiles) ;; Load all tiles (if not in cache) 
 	     (dolist (elt (reverse tiles) '())
 	       (setq files-acc (cons (format "%s" (osm-lib-gen-tile-cache-filepath elt)) files-acc)))
-	     (make-process :name "montage-proc"
-			   :command (append (list "montage") files-acc  (list "-tile" (format "%sx%s" m n) "-geometry" "+0+0" ofile-path))
-			   :buffer "montage-buffer")
-	     ofile-path))))
+	     (lexical-let ((do-on-success do-on-success)
+			   (ofile-path ofile-path))
+			  (lexical-let 
+			   ((sentinel (lambda (process signal)
+				       (cond ((equal signal "finished\n")
+					      (if do-on-success
+						  (funcall do-on-success ofile-path)
+						(message "do-on-success function is nil")))
+					     (t (message "Montage failed!"))))))
+			   (make-process :name "montage-proc"
+					 :command (append (list "montage") files-acc  (list "-tile" (format "%sx%s" m n) "-geometry" "+0+0" ofile-path))
+					 :buffer "montage-buffer"
+					 :sentinel sentinel)))))))
 
 (provide 'osm-lib)
 
@@ -187,6 +220,10 @@
 ;; (osm-lib-gen-tile-url (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8))
      
 ;; (osm-lib-load-tile (osm-lib-x-y-tile-index osm-lib-center-of-the-universe 8))
+
+;; (osm-lib-tile-grid-coords 5 5 (cons (cons 2 2) 2))
+
+;; (osm-lib-num-tiles 2)
 
 ;; (osm-lib-load-tiles (osm-lib-tile-grid-coords 5 5 (cons (cons 137 77) 8)))
 
