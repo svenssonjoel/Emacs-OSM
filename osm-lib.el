@@ -183,7 +183,7 @@
 
 
 (defun osm-lib-gen-tile-montage (mntiles &optional do-on-success)
-  "Compose tiles into a larger map"
+  "Compose tiles into a larger map. If the map has been generated earlier and is still present in Scratch, use it."
   (let* ((mn (car mntiles))
 	 (tiles (cdr mntiles))
 	 (m (car mn))
@@ -193,23 +193,26 @@
 	 (scratch-path (concat (expand-file-name osm-lib-root-dir) osm-lib-scratch-work-area))
 	 (ofile (format "m%s.png" (sxhash tiles)))
 	 (ofile-path (concat scratch-path ofile)))
-    (let ((files-acc '()))
-      (progn (osm-lib-load-tiles tiles) ;; Load all tiles (if not in cache) 
-	     (dolist (elt (reverse tiles) '())
-	       (setq files-acc (cons (format "%s" (osm-lib-gen-tile-cache-filepath elt)) files-acc)))
-	     (lexical-let ((do-on-success do-on-success)
-			   (ofile-path ofile-path))
-			  (lexical-let 
-			   ((sentinel (lambda (process signal)
-				       (cond ((equal signal "finished\n")
-					      (if do-on-success
-						  (funcall do-on-success ofile-path)
-						(message "do-on-success function is nil")))
-					     (t (message "Montage failed!"))))))
-			   (make-process :name "montage-proc"
-					 :command (append (list "montage") files-acc  (list "-tile" (format "%sx%s" m n) "-geometry" "+0+0" ofile-path))
-					 :buffer "montage-buffer"
-					 :sentinel sentinel)))))))
+    (if (file-exists-p ofile-path)
+	(progn (message (format "Montage file exists  %s" ofile))
+	       (funcall do-on-success ofile-path))
+      ((let ((files-acc '()))
+	 (progn (osm-lib-load-tiles tiles) ;; Load all tiles (if not in cache) 
+		(dolist (elt (reverse tiles) '())
+		  (setq files-acc (cons (format "%s" (osm-lib-gen-tile-cache-filepath elt)) files-acc)))
+		(lexical-let ((do-on-success do-on-success)
+			      (ofile-path ofile-path))
+			     (lexical-let 
+			      ((sentinel (lambda (process signal)
+					   (cond ((equal signal "finished\n")
+						  (if do-on-success
+						      (funcall do-on-success ofile-path)
+						    (message "do-on-success function is nil")))
+						 (t (message "Montage failed!"))))))
+			      (make-process :name "montage-proc"
+					    :command (append (list "montage") files-acc  (list "-tile" (format "%sx%s" m n) "-geometry" "+0+0" ofile-path))
+					    :buffer "montage-buffer"
+					    :sentinel sentinel)))))))))
 
 (provide 'osm-lib)
 

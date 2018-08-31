@@ -118,7 +118,7 @@
 	     (lambda (filename)
 	       (progn 
 		 (set-buffer buff)
-		 (message (format "Buffer Name: %s" (buffer-name (current-buffer))))
+		 ;;(message (format "Buffer Name: %s" (buffer-name (current-buffer))))
 		 (image-transform-set-scale osm-image-scale)
 		 (image-toggle-display-text)
 		 (setf (buffer-string) "")
